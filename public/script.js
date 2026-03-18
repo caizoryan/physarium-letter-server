@@ -1,11 +1,12 @@
 import { Q5 as p5 } from "./lib/q5/q5.js";
 import { reactive } from "./lib/chowk.js";
 import { dom } from "./lib/dom.js";
+import { notificationpopup } from "./notification.js";
 
 let container = [".q5"];
 
-function saveLetter(letter){
-	fetch("/fs/letter-" + letter +"-"+ Date.now()+'.json', {
+function saveLetter(letter, time){
+	fetch("/fs/letter-" + letter +"-"+ time +'.json', {
 		method: "POST",
 		body: JSON.stringify(state),
 		headers: {
@@ -17,9 +18,9 @@ function saveLetter(letter){
 	})
 }
 
-function saveLetterImage(letter, canvas){
+function saveLetterImage(letter, canvas, time){
   const dataURL = canvas.toDataURL("image/png");
-	fetch("/fs-image/letter-" + letter +"-"+ Date.now()+'.png', {
+	fetch("/fs-image/letter-" + letter +"-"+ time +'.png', {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -30,6 +31,7 @@ function saveLetterImage(letter, canvas){
   })
 		.then(res => {
 			console.log(res)
+			notificationpopup("SAVED")
 		})
 }
 
@@ -104,12 +106,14 @@ state.rotationAngle = state.sensorAngle;
 let grid = createGrid(state.width, state.size);
 state.decay = .025;
 state.currentWord = "";
+state.paused = 0
+state.frameRate = 14;
+state.backgroundOpacity = 1;
 
 
 let d = localStorage.getItem("data")
 if (d) state = JSON.parse(d)
 
-state.paused = 0
 
 state.lineDiff = {
 	xMin: 25,
@@ -424,6 +428,8 @@ function ui(){
 		['.panel', key('Iterations'), number('iterations', {})],
 		['.panel', key('Paused'), number('paused', {})],
 		['.panel', key('Font'), string('fontFamily', {})],
+		['.panel', key('Background Opacity'), number('backgroundOpacity', {})],
+		['.panel', key('Frame Rate'), number('frameRate', {})],
 
 
 		['h4.panel-header', 'Sampling'],
@@ -434,6 +440,8 @@ function ui(){
 		['.panel', key('Ascii Size'), number('asciiSize', {})],
 		['.panel', key('Ascii String'), string('chars', {})],
 		['.panel', key('Ascii Font'), string('asciiFontFamily', {})],
+		['.panel', key('Mold Count'), number('moldCount', {})],
+		['.panel', key('Cell Size'), number('size', {})],
 
 		['h4.panel-header', 'Outline'],
 		['.panel', key('Shape'), options('outlineShape', ['rect', 'circle', 'text'], {})],
@@ -446,12 +454,12 @@ function ui(){
 
 		['h4.panel-header', 'Pre'],
 		['.panel', key('Disturbance'), number('disturbance', {})],
-		['.panel', key('Show Layer'), string('showLayer', {})],
-		['.panel', key('Layer Opacity'), string('layerOpacity', {})],
+		['.panel', key('Show Layer'), number('showLayer', {})],
+		['.panel', key('Layer Opacity'), number('layerOpacity', {})],
 
 		['.panel', key('Filter'), string('filter', {})],
 		['.panel', key('Shape'), options('blobShape', ['rect', 'circle'], {})],
-		['.panel', key('Blob Size'), string('blobSize', {})],
+		['.panel', key('Blob Size'), number('blobSize', {})],
 
 		['h4.panel-header', 'Extra'],
 		['.panel', key('Line Width'), number('strokeWeight', {})],
@@ -460,6 +468,8 @@ function ui(){
 }
 
 let iterations = 0
+
+let molds = Array(state.moldCount).fill(0).map((e) => mold());
 function init() {
 	let q5El = dom(container);
 	let root = dom(
@@ -471,7 +481,6 @@ function init() {
 
 	p = new p5("instance", q5El);
 
-	let molds = Array(state.moldCount).fill(0).map((e) => mold());
 
 	let alphabetPoints = {};
 	// let alphabetOutlinePoints = {};
@@ -481,7 +490,7 @@ function init() {
 	p.setup = () => {
 		p.createCanvas(state.width, state.height);
 		setGrid(state.letter);
-
+		p.pixelDensity(1);
 	};
 
 	let pressed = false;
@@ -509,10 +518,10 @@ function init() {
 		};
 
 		p.draw = () => {
-			p.frameRate(12)
+			p.frameRate(state.frameRate)
 			if (iterations >= state.iterations || state.paused) return
 			iterations++
-			p.background(255, 5);
+			p.background(255, 255*state.backgroundOpacity);
 			if (state.showLayer) {
 				p.opacity(state.layerOpacity)
 				// p.blendMode(p.MULTIPLY)
@@ -640,9 +649,15 @@ function init() {
 		};
 }
 
+let lastCellSize = 0
 let reset = () => {
 	if (timeout) clearTimeout(timeout)
 	iterations = 0
+
+	if (lastCellSize != state.size) grid = createGrid(state.width, state.size);
+	lastCellSize = state.size
+
+	molds = Array(state.moldCount).fill(0).map((e) => mold());
 	setGrid(state.letter)
 	localStorage.setItem("data", JSON.stringify(state))
 }
@@ -659,8 +674,9 @@ document.onkeydown = e => {
 
 
 	if (e.key == 'S') {
-		saveLetter(state.letter)
-		saveLetterImage(state.letter, p.canvas)
+		let time = Date.now()
+		saveLetter(state.letter, time)
+		saveLetterImage(state.letter, p.canvas, time)
 	}
 }
 
