@@ -193,6 +193,7 @@ let done = []
 
 function drawMainImage(letter, side='verso', date) {
 	let cols = grid[(side + '_columns')]()
+	let col = cols[0]
 	let files = fs.readdirSync('./fs/')
 	let could = []
 
@@ -216,17 +217,17 @@ function drawMainImage(letter, side='verso', date) {
 
 	done.push(chosen)
 
-	let width = grid.column_width(9)
+	let width = grid.column_width(8)
 
-	let y = cols[0].y
+	let y = col.y
 		// grid.hanglines()[0]
 
 	doc.image('./fs/'+chosen, 
-		cols[0].x, y,
+		col.x, y,
 		{width }
 	)
 
-	doc.rect( cols[0].x, y,
+	doc.rect( col.x, y,
 		width,	
 		width)
 		 // .dash(3, {space: 1})
@@ -247,9 +248,9 @@ function stat(key, value, x, y) {
 
 	drawHorizontalLineDocFn({
 		x, 
-		y: y-.5, 
+		y: y-.75, 
 		width: lineWidth,
-		stroke: 'black',
+		stroke: [0,0,0,40],
 		strokeWeight: .1,
 	})(doc)
 
@@ -258,7 +259,7 @@ function stat(key, value, x, y) {
 		x,y,
 		fill: 'black',
 		fontFamily: './Hermit-Regular.otf',
-		fontSize: 9,
+		fontSize: 7.5,
 	})(doc)
 
 	drawTextDocFn({
@@ -267,7 +268,7 @@ function stat(key, value, x, y) {
 		width: grid.column_width(3),
 		fill: 'black',
 		fontFamily: './monument_mono_bold.otf',
-		fontSize: 9,
+		fontSize: 7.5,
 		// align: 'right'
 	})(doc)
 }
@@ -303,7 +304,7 @@ function drawHeading(heading, x, y){
 
 	drawHorizontalLineDocFn({
 		x, 
-		y: y-.5, 
+		y: y-2, 
 		width: lineWidth,
 		stroke: 'black',
 		strokeWeight: 1.5,
@@ -315,7 +316,7 @@ function drawHeading(heading, x, y){
 		// width: grid.column_width(3),
 		fill: 'black',
 		fontFamily: './monument_mono_bold.otf',
-		fontSize: 9,
+		fontSize: 7.5,
 		// align: 'right'
 	})(doc)
 }
@@ -327,8 +328,8 @@ function drawStats(file, side){
 
 	let x = cols[1].x
 	let headingX = cols[1].x
-	let y = grid.hanglines()[8]
-	let leading = 16.2
+	let y = grid.hanglines()[7]
+	let leading = 15.2
 	let headingLeading = 24.2
 
 	// stat("LETTER", data.letter, x, y)
@@ -359,7 +360,7 @@ function drawStats(file, side){
 	stat("MOLD COUNT", data.moldCount, x, y)
 	y+=leading
 
-	y+=headingLeading+leading
+	y+=headingLeading
 	drawHeading('ASCII', headingX, y)
 	y+=headingLeading
 
@@ -367,6 +368,21 @@ function drawStats(file, side){
 	y+=leading
 
 	stat("STRING", data.chars, x, y)
+	y+=leading
+
+	y+=headingLeading
+	drawHeading('OUTLINE', headingX, y)
+	y+=headingLeading
+	stat("STROKE WEIGHT", data.outlineSize, x, y)
+	y+=leading
+
+	stat("FUNKY LINE", data.strokeWeight, x, y)
+	y+=leading
+
+	stat("BLOB SIZE", data.blobSize, x, y)
+	y+=leading
+
+	stat("DISTURBANCE", data.disturbance, x, y)
 	y+=leading
 
 
@@ -415,11 +431,22 @@ function drawSpread(letter){
 	pageNum+=2
 }
 
-drawSpread('A')
-drawSpread('F')
-drawSpread('K')
+let spreads = [
+	() => drawSpread('A'),
+	() => drawSpread('B'),
+	() => drawSpread('C'),
+	() => drawSpread('D'),
+	() => drawSpread('f'),
+	() => drawSpread('F'),
+	() => drawSpread('K'),
+	() => drawSpread('R'),
+	() => drawSpread('S'),
+	() => drawSpread('X'),
+	() => drawSpread('Z')
+]
 
-drawSpread('Z')
+spreads.forEach(e => e())
+
 
 
 doc.end();
