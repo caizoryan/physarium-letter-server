@@ -435,36 +435,30 @@ function drawSpread(doc, letter){
 	// doc.addPage()
 }
 
-let spreads = [
-	[ (doc) => draw_grid(doc, grid, false)],
-	[ (doc) => draw_grid(doc, grid, false)],
-	[ (doc) => draw_grid(doc, grid, false)],
-	[ (doc) => drawSpread(doc,'%E0%A4%85%20'),
-		drawPageNumber() ],
-	[(doc) => drawSpread(doc,'A'),
-		drawPageNumber() ],
-	[(doc) => drawSpread(doc,'B'),
-		drawPageNumber() ],
-	[(doc) => drawSpread(doc,'C'),
-		drawPageNumber() ],
-	[(doc) => drawSpread(doc,'D'),
-		drawPageNumber() ],
-	[(doc) => drawSpread(doc,'f'),
-		drawPageNumber() ],
-	[(doc) => drawSpread(doc,'F'),
-		drawPageNumber() ],
-	[(doc) => drawSpread(doc,'K'),
-		drawPageNumber() ],
-	[(doc) => drawSpread(doc,'R'),
-		drawPageNumber() ],
-	[(doc) => drawSpread(doc,'S'),
-		drawPageNumber() ],
-	[(doc) => drawSpread(doc,'X'),
-		drawPageNumber() ],
-	[(doc) => draw_grid(doc, grid, false)],
+const letters = [
+  '%E0%A4%85%20',
+  'A','a','B','C','D',
+	'E', 'f','F', 'G', 'H',
+	'I', 'J', 'K','L','M',
+	'N','O','P', 'Q','R',
+	'S','T','U','V',
+	'W','X', 'Y','Z'
 
-	// (doc) => drawSpread(doc,'Z')
-]
+];
+
+
+const spreads = [
+  [(doc) => draw_grid(doc, grid, false)],
+  [(doc) => draw_grid(doc, grid, false)],
+  [(doc) => draw_grid(doc, grid, false)],
+
+  ...letters.map(letter => ([
+    (doc) => drawSpread(doc, letter),
+    drawPageNumber()
+  ])),
+
+  [(doc) => draw_grid(doc, grid, false)]
+];
 
 
 let recto_image = (doc, spread, spreads) => {
@@ -559,7 +553,23 @@ let writeSignature = (signature, filename) => {
 	doc.end();
 }
 
-writeSignature(spreads, 'dawg.pdf')
 
-// doc.end();
+let writeSequence = (signature, filename) => {
+	const doc = new PDFDocument();
+	doc.pipe(fs.createWriteStream(filename));
+
+	spreads.forEach((e, i, arr) => {
+		doc.save()
+		doc.translate(offsetX, offsetY)
+		e.forEach(f => f(doc))
+		doc.restore()
+		if (i != arr.length - 1) doc.addPage()
+	})
+
+	doc.end();
+}
+
+// writeSignature(spreads, 'dawg.pdf')
+ writeSequence(spreads, 'dawg.pdf')
+
 
