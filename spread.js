@@ -191,9 +191,10 @@ doc.pipe(fs.createWriteStream('testy.pdf'));
 
 let done = []
 
-function drawMainImage(letter, side='verso', date) {
+function drawMainImage(doc,letter, side='verso', date) {
 	let cols = grid[(side + '_columns')]()
 	let col = cols[0]
+	let width = grid.column_width(9)
 	let files = fs.readdirSync('./fs/')
 	let could = []
 
@@ -211,36 +212,30 @@ function drawMainImage(letter, side='verso', date) {
 	let iterations = 0
 	while (done.includes(chosen) && iterations < 50){
 		chosen = could[Math.floor(Math.random()*could.length)]
-		console.log("OK?", iterations)
 		iterations++
 	}
 
 	done.push(chosen)
 
-	let width = grid.column_width(8)
-
 	let y = col.y
-		// grid.hanglines()[0]
 
 	doc.image('./fs/'+chosen, 
 		col.x, y,
 		{width }
 	)
 
-	doc.rect( col.x, y,
-		width,	
-		width)
-		 // .dash(3, {space: 1})
-		.lineWidth(.1)
-		.stroke("black")
-	.undash()
+	// doc.rect( col.x, y,
+	// 	width,	
+	// 	width)
+	// 	.lineWidth(.1)
+	// 	.stroke("black")
 
 	let json = chosen.replace('png', 'json')
 
-	drawStats('./fs/'+json, side)
+	drawStats(doc, './fs/'+json, side)
 }
 
-function stat(key, value, x, y) {
+function stat(doc, key, value, x, y) {
 	let width = grid.column_width(5)
 	let gutter = grid.props.gutter
 	let lineWidth = width + grid.column_width(3)+gutter
@@ -259,7 +254,7 @@ function stat(key, value, x, y) {
 		x,y,
 		fill: 'black',
 		fontFamily: './Hermit-Regular.otf',
-		fontSize: 7.5,
+		fontSize: 7,
 	})(doc)
 
 	drawTextDocFn({
@@ -267,8 +262,8 @@ function stat(key, value, x, y) {
 		x: valueX, y,
 		width: grid.column_width(3),
 		fill: 'black',
-		fontFamily: './monument_mono_bold.otf',
-		fontSize: 7.5,
+		fontFamily: './Hermit-Regular.otf',
+		fontSize: 7,
 		// align: 'right'
 	})(doc)
 }
@@ -276,10 +271,14 @@ function stat(key, value, x, y) {
 
 const getIndex = (char) => Math.abs(char.charCodeAt(0) - 'a'.charCodeAt(0));
 
-function drawSideAlphabet(letter) {
+function drawSideAlphabet(doc, letter) {
 	let width = 20
+	let index =getIndex(letter.toUpperCase())
+	console.log(index)
+	if (index > 32) index = 32
+
 	let x = grid.props.spread_width - width
-	let y = (getIndex(letter)) * width
+	let y = (index) * width
 
 	console.log(x, y)
 
@@ -296,7 +295,7 @@ function drawSideAlphabet(letter) {
 }
 
 
-function drawHeading(heading, x, y){
+function drawHeading(doc, heading, x, y){
 	let width = grid.column_width(5)
 	let gutter = grid.props.gutter
 	let lineWidth = width + grid.column_width(3)+gutter
@@ -307,7 +306,7 @@ function drawHeading(heading, x, y){
 		y: y-2, 
 		width: lineWidth,
 		stroke: 'black',
-		strokeWeight: 1.5,
+		strokeWeight: 1,
 	})(doc)
 
 	drawTextDocFn({
@@ -321,7 +320,7 @@ function drawHeading(heading, x, y){
 	})(doc)
 }
 
-function drawStats(file, side){
+function drawStats(doc, file, side){
 	let cols = grid[(side + '_columns')]()
 	let data = fs.readFileSync(file, {encoding: 'utf8'})
 	data = JSON.parse(data)
@@ -329,125 +328,238 @@ function drawStats(file, side){
 	let x = cols[1].x
 	let headingX = cols[1].x
 	let y = grid.hanglines()[7]
-	let leading = 15.2
-	let headingLeading = 24.2
+	let leading = 12.2
+	let headingLeading = 21.2
 
 	// stat("LETTER", data.letter, x, y)
 	// y+=leading
 
-	drawSideAlphabet(data.letter)
 
-	drawHeading('PARAMETERS', headingX, y)
+	drawHeading(doc, 'PARAMETERS', headingX, y)
 	y+=headingLeading
 
-	stat("TEXT SIZE", data.textSize, x, y)
+	stat(doc, "TEXT SIZE", data.textSize, x, y)
 	y+=leading
 
-	stat("FONT FAMILY", data.fontFamily.replace("Variable Unlicensed Trial", ""), x, y)
-	y+=leading
-
-
-	stat("BACKGROUND (%)", data.backgroundOpacity, x, y)
-	y+=leading
-
-	stat("SAMPLE RATE", data.mainSampleRate, x, y)
-	y+=leading
-
-	stat("BLOB SAMPLE RATE", data.sampleRate, x, y)
+	stat(doc, "FONT FAMILY", data.fontFamily.replace("Variable Unlicensed Trial", ""), x, y)
 	y+=leading
 
 
-	stat("MOLD COUNT", data.moldCount, x, y)
+	stat(doc, "BACKGROUND (%)", data.backgroundOpacity, x, y)
 	y+=leading
 
-	y+=headingLeading
-	drawHeading('ASCII', headingX, y)
-	y+=headingLeading
-
-	stat("SIZE", data.asciiSize, x, y)
+	stat(doc, "SAMPLE RATE", data.mainSampleRate, x, y)
 	y+=leading
 
-	stat("STRING", data.chars, x, y)
+	stat(doc, "BLOB SAMPLE RATE", data.sampleRate, x, y)
+	y+=leading
+
+
+	stat(doc, "MOLD COUNT", data.moldCount, x, y)
 	y+=leading
 
 	y+=headingLeading
-	drawHeading('OUTLINE', headingX, y)
+	drawHeading(doc, 'ASCII', headingX, y)
 	y+=headingLeading
-	stat("STROKE WEIGHT", data.outlineSize, x, y)
+
+	stat(doc, "SIZE", data.asciiSize, x, y)
 	y+=leading
 
-	stat("FUNKY LINE", data.strokeWeight, x, y)
+	stat(doc, "STRING", data.chars, x, y)
 	y+=leading
 
-	stat("BLOB SIZE", data.blobSize, x, y)
+	y+=headingLeading
+	drawHeading(doc, 'OUTLINE', headingX, y)
+	y+=headingLeading
+	stat(doc, "STROKE WEIGHT", data.outlineSize, x, y)
 	y+=leading
 
-	stat("DISTURBANCE", data.disturbance, x, y)
+	stat(doc, "FUNKY LINE", data.strokeWeight, x, y)
+	y+=leading
+
+	stat(doc, "BLOB SIZE", data.blobSize, x, y)
+	y+=leading
+
+	stat(doc, "DISTURBANCE", data.disturbance, x, y)
 	y+=leading
 
 
-	// stat("TEXT SIZE", data.textSize, x, y)
+	// stat(doc, "TEXT SIZE", data.textSize, x, y)
 	// y+=leading
 	// zj
+	//
+
+	drawSideAlphabet(doc, data.letter)
 }
 
 function drawPageNumber(){
-	let colVerso = grid.verso_columns()[1]
-	let colRecto = grid.recto_columns()[1]
+	let colVerso = grid.verso_columns()[0]
+	let colRecto = grid.recto_columns()[8]
 
-	let width = grid.column_width(5)
+	let width = grid.column_width(2)
 	let valueXVerso = colVerso.x + width
-	let valueXRecto = colRecto.x + width
+	let valueXRecto = colRecto.x 
 
 	let y = grid.props.spread_height - inch(.5)
+	let pg = pageNum
 
-	drawTextDocFn({
-		text:  pageNum-1,
-		x: valueXVerso,
-		y,
-		fill: 'black',
-		fontFamily: './monument_mono_bold.otf',
-		fontSize: 9,
-	})(doc)
+	pageNum+=2
 
-	drawTextDocFn({
-		text:  pageNum,
-		x: valueXRecto,
-		y,
-		fill: 'black',
-		fontFamily: './monument_mono_bold.otf',
-		fontSize: 9,
-	})(doc)
+	return (doc) => {
+		if (pg != 1) drawTextDocFn({
+			text:  pg-1,
+			x: valueXVerso,
+			y,
+			fill: 'black',
+			fontFamily: './monument_mono_bold.otf',
+			fontSize: 9,
+		})(doc)
+
+		drawTextDocFn({
+			text:  pg,
+			x: valueXRecto,
+			y,
+			fill: 'black',
+			fontFamily: './monument_mono_bold.otf',
+			fontSize: 9,
+		})(doc)
+	}
 }
 
 let pageNum = 1
-function drawSpread(letter){
-	doc.translate(offsetX, offsetY)
+function drawSpread(doc, letter){
 	draw_grid(doc, grid, false)
-	drawMainImage(letter)
-	drawMainImage(letter, 'recto')
-	drawPageNumber()
-	doc.addPage()
-	pageNum+=2
+	drawMainImage(doc, letter)
+	drawMainImage(doc, letter, 'recto')
+	// drawPageNumber(doc)
+	// doc.addPage()
 }
 
 let spreads = [
-	() => drawSpread('A'),
-	() => drawSpread('B'),
-	() => drawSpread('C'),
-	() => drawSpread('D'),
-	() => drawSpread('f'),
-	() => drawSpread('F'),
-	() => drawSpread('K'),
-	() => drawSpread('R'),
-	() => drawSpread('S'),
-	() => drawSpread('X'),
-	() => drawSpread('Z')
+	[ (doc) => draw_grid(doc, grid, false)],
+	[ (doc) => draw_grid(doc, grid, false)],
+	[ (doc) => draw_grid(doc, grid, false)],
+	[ (doc) => drawSpread(doc,'%E0%A4%85%20'),
+		drawPageNumber() ],
+	[(doc) => drawSpread(doc,'A'),
+		drawPageNumber() ],
+	[(doc) => drawSpread(doc,'B'),
+		drawPageNumber() ],
+	[(doc) => drawSpread(doc,'C'),
+		drawPageNumber() ],
+	[(doc) => drawSpread(doc,'D'),
+		drawPageNumber() ],
+	[(doc) => drawSpread(doc,'f'),
+		drawPageNumber() ],
+	[(doc) => drawSpread(doc,'F'),
+		drawPageNumber() ],
+	[(doc) => drawSpread(doc,'K'),
+		drawPageNumber() ],
+	[(doc) => drawSpread(doc,'R'),
+		drawPageNumber() ],
+	[(doc) => drawSpread(doc,'S'),
+		drawPageNumber() ],
+	[(doc) => drawSpread(doc,'X'),
+		drawPageNumber() ],
+	[(doc) => draw_grid(doc, grid, false)],
+
+	// (doc) => drawSpread(doc,'Z')
 ]
 
-spreads.forEach(e => e())
 
+let recto_image = (doc, spread, spreads) => {
+	doc
+		.save()
+		.rect(inch(4.25), 0, inch(4.25), inch(11))
+		.clip()
+	spreads[spread].forEach(item => {
+		item(doc)
+	})
+	doc.restore()
+}
+let verso_image = (doc, spread, spreads) => {
+	doc
+		.save()
+		.rect(0, 0, inch(4.25), inch(11))
+		.clip()
 
+	spreads[spread].forEach(item => {
+		item(doc)
+	})
 
-doc.end();
+	doc.restore()
+}
+
+let pageImage = (doc, spreadNum, spreads) => {
+	let spread = Math.floor(spreadNum / 2)
+	return spreadNum % 2 == 1
+		? recto_image(doc, spread, spreads)
+		: verso_image(doc, spread, spreads)
+}
+
+let pages = (spreadcount) => {
+	if (spreadcount % 2 == 1) {
+		return Array(spreadcount).fill(undefined)
+			.reduce((acc, _, i) =>
+				(acc.push([i * 2, i == spreadcount - 1 ? 0 : i * 2 + 1]), acc), [])
+	}
+
+	else console.log("FUCK NOT MULTIPLE OF 4", (spreadcount * 2) - 2)
+}
+let imposedPages = (pagesArray) => {
+	let spreadCount = pagesArray.length
+	if (spreadCount % 2 != 1) {
+		console.error("FUCK NOT MULTIPLE OF 4", (spreadCount * 2) - 2)
+	}
+	// get pages
+	let last = pagesArray.length - 1
+	let pair = (i) => pagesArray[last - i]
+	let pairskiplast = (i) => pagesArray[last - i - 1]
+
+	let middle = Math.ceil(last / 2)
+
+	// switch each recto with pair spread recto till middle
+	for (let i = 0; i < middle; i++) {
+		let f_verso = pagesArray[i][0]
+		let p_verso = pair(i)[0]
+
+		pagesArray[i][0] = p_verso
+		pair(i)[0] = f_verso
+	}
+
+	let pairedup = []
+
+	// pair spreads up with each other
+	for (let i = 0; i < middle; i++) {
+		pairedup.push(pagesArray[i])
+		pairedup.push(pairskiplast(i))
+	}
+
+	return pairedup
+}
+
+// spreads.forEach(e => e(doc))
+
+let writeSignature = (signature, filename) => {
+	const doc = new PDFDocument();
+	doc.pipe(fs.createWriteStream(filename));
+
+	let pgs = pages(signature.length)
+	let imposed_pages = imposedPages(pgs)
+	imposed_pages.forEach(([v, r], i) => {
+		doc.save()
+		doc.translate(offsetX, offsetY)
+		// doc.scale(.95, { origin: [inch(5.5), inch(4.25)] })
+		pageImage(doc, v, signature)
+		pageImage(doc, r, signature)
+		doc.restore()
+		if (i != imposed_pages.length - 1) doc.addPage()
+	})
+
+	doc.end();
+}
+
+writeSignature(spreads, 'dawg.pdf')
+
+// doc.end();
 
