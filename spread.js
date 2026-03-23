@@ -3,6 +3,7 @@ import fs from 'fs'
 import { Grid } from './grid.js';
 
 let inch = v => v * 72
+let done = []
 
 let grid = new Grid({
 	margin: {
@@ -45,7 +46,7 @@ let grid = new Grid({
 	page_height: inch(11)
 })
 
-let draw_grid = (doc, grid, full=true) => {
+let draw_grid = (doc, grid, full = true) => {
 	let [recto, verso] = grid.columns()
 
 	let strokeWeight = 1
@@ -54,18 +55,108 @@ let draw_grid = (doc, grid, full=true) => {
 	doc.lineWidth(strokeWeight)
 	doc.strokeColor(strokeColor)
 
-	doc.rect(0, 0, grid.props.spread_width, grid.props.spread_height)
-
+	// doc.rect(0, 0, grid.props.spread_width, grid.props.spread_height)
 	doc.fillAndStroke('white', 'black')
+	
+	// ----------------------
+	// ~~~~~~~~~~~~~~~~~~~~~~
+	// ----------------------
+	// CROP MARKS
+	// ----------------------
+	// ----------------------
+	// ----------------------
+	drawLineDocFn({
+		points: [
+			{ x: -10, y: 0 },
+			{ x: -3, y: 0 }
+		],
+		stroke: [0, 0, 0, 100],
+		strokeWeight: 1,
+	})(doc)
+
 	doc.strokeColor(strokeColor)
 
 	drawLineDocFn({
 		points: [
-			{ x: grid.props.spread_width / 2, y: 0 },
-			{ x: grid.props.spread_width / 2, y: grid.props.spread_height }],
+			{ x: 0, y: -10 },
+			{ x: 0, y: -3 }
+		],
 		stroke: [0, 0, 0, 100],
 		strokeWeight: 1,
 	})(doc)
+
+	drawLineDocFn({
+		points: [
+			{ x: grid.props.spread_width+3, y: 0 },
+			{ x: grid.props.spread_width+10, y: 0 },
+		],
+		stroke: [0, 0, 0, 100],
+		strokeWeight: 1,
+	})(doc)
+
+	drawLineDocFn({
+		points: [
+			{ x: grid.props.spread_width, 
+				y: -10 },
+			{ x: grid.props.spread_width, 
+				y: -3 },
+		],
+		stroke: [0, 0, 0, 100],
+		strokeWeight: 1,
+	})(doc)
+
+	drawLineDocFn({
+		points: [
+			{ x: grid.props.spread_width, 
+				y: grid.props.spread_height + 3 },
+			{ x: grid.props.spread_width, 
+				y: grid.props.spread_height + 10 },
+		],
+		stroke: [0, 0, 0, 100],
+		strokeWeight: 1,
+	})(doc)
+
+	drawLineDocFn({
+		points: [
+			{ x: grid.props.spread_width+ 3, 
+				y: grid.props.spread_height  },
+			{ x: grid.props.spread_width + 10,
+				y: grid.props.spread_height  },
+		],
+		stroke: [0, 0, 0, 100],
+		strokeWeight: 1,
+	})(doc)
+
+	drawLineDocFn({
+		points: [
+			{ x:  -10, 
+				y: grid.props.spread_height  },
+			{ x: -3,
+				y: grid.props.spread_height  },
+		],
+		stroke: [0, 0, 0, 100],
+		strokeWeight: 1,
+	})(doc)
+
+	drawLineDocFn({
+		points: [
+			{ x: 0, 
+				y: grid.props.spread_height +3 },
+			{ x: 0,
+				y: grid.props.spread_height +10 },
+		],
+		stroke: [0, 0, 0, 100],
+		strokeWeight: 1,
+	})(doc)
+
+
+	// drawLineDocFn({
+	// 	points: [
+	// 		{ x: grid.props.spread_width / 2, y: 0 },
+	// 		{ x: grid.props.spread_width / 2, y: grid.props.spread_height }],
+	// 	stroke: [0, 0, 0, 100],
+	// 	strokeWeight: 1,
+	// })(doc)
 
 	if (full){
 		grid.hanglines().forEach(e => {
@@ -179,45 +270,17 @@ let drawStripedRect = props => doc => {
 }
 
 
-
-
-const doc = new PDFDocument();
-
 let offsetY = (grid.props.page_height - (grid.props.spread_height)) / 2
 let offsetX = (grid.props.page_width - (grid.props.spread_width)) / 2
-doc.pipe(fs.createWriteStream('testy.pdf'));
 
 
-
-let done = []
-
-function drawMainImage(doc,letter, side='verso', date) {
+function drawMainImage(doc, letter, side='verso', date) {
 	let cols = grid[(side + '_columns')]()
 	let col = cols[0]
 	let width = grid.column_width(9)
-	let files = fs.readdirSync('./fs/')
-	let could = []
-
-	files.forEach(file => {
-		if (
-			file.includes('letter-' + letter + '-')
-			&& file.split('.').pop() == 'png'
-		){
-			could.push(file)
-		}
-	})
-
-	let chosen = could[Math.floor(Math.random()*could.length)]
-
-	let iterations = 0
-	while (done.includes(chosen) && iterations < 50){
-		chosen = could[Math.floor(Math.random()*could.length)]
-		iterations++
-	}
-
-	done.push(chosen)
-
 	let y = col.y
+	let chosen = letterFilePairs[letter][side == 'verso' ? 0 : 1]
+
 
 	doc.image('./fs/'+chosen, 
 		col.x, y,
@@ -274,17 +337,15 @@ const getIndex = (char) => Math.abs(char.charCodeAt(0) - 'a'.charCodeAt(0));
 function drawSideAlphabet(doc, letter) {
 	let width = 20
 	let index =getIndex(letter.toUpperCase())
-	console.log(index)
 	if (index > 32) index = 32
 
 	let x = grid.props.spread_width - width
 	let y = (index) * width
 
-	console.log(x, y)
 
 	doc.rect( 
 		x, y,
-		width,	
+		width+10,	
 		width).fill('black')
 
 	drawTextDocFn({
@@ -428,7 +489,7 @@ function drawPageNumber(){
 
 let pageNum = 1
 function drawSpread(doc, letter){
-	draw_grid(doc, grid, false)
+	// draw_grid(doc, grid, false)
 	drawMainImage(doc, letter)
 	drawMainImage(doc, letter, 'recto')
 	// drawPageNumber(doc)
@@ -446,6 +507,44 @@ const letters = [
 
 ];
 
+let letterFilePairs = {}
+
+let findUniqueLetterFile = (letter) => {
+	let files = fs.readdirSync('./fs/')
+	let could = []
+
+	files.forEach(file => {
+		if (
+			file.includes('letter-' + letter + '-')
+			&& file.split('.').pop() == 'png'
+		){
+			could.push(file)
+		}
+	})
+
+	let chosen = could[Math.floor(Math.random()*could.length)]
+
+	let iterations = 0
+	while (done.includes(chosen) && iterations < 5000){
+		chosen = could[Math.floor(Math.random()*could.length)]
+		iterations++
+	}
+
+	if (done.includes(chosen)){
+		console.log('CHOSEN IS IN DONE', chosen, iterations, could)
+	}
+
+	else {
+		console.log('success?', chosen, iterations, could)
+	}
+
+	done.push(chosen)
+	return chosen
+}
+
+letters.forEach(letter => {
+	letterFilePairs[letter] = [findUniqueLetterFile(letter), findUniqueLetterFile(letter)]
+})
 
 const spreads = [
   [(doc) => draw_grid(doc, grid, false)],
@@ -543,6 +642,7 @@ let writeSignature = (signature, filename) => {
 	imposed_pages.forEach(([v, r], i) => {
 		doc.save()
 		doc.translate(offsetX, offsetY)
+		draw_grid(doc, grid, false)
 		// doc.scale(.95, { origin: [inch(5.5), inch(4.25)] })
 		pageImage(doc, v, signature)
 		pageImage(doc, r, signature)
@@ -569,7 +669,9 @@ let writeSequence = (signature, filename) => {
 	doc.end();
 }
 
-// writeSignature(spreads, 'dawg.pdf')
- writeSequence(spreads, 'dawg.pdf')
+writeSignature(spreads.slice(0, 13), 'physarium_print_1.pdf')
+writeSignature(spreads.slice(12, 25), 'physarium_print_2.pdf')
+writeSignature(spreads.slice(24), 'physarium_print_3.pdf')
+ // writeSequence(spreads, 'dawg.pdf')
 
 
